@@ -1,7 +1,7 @@
-name         = "eks-localzone-blog"
+name         = "eks-local-zone-demo"
 vpc_cidr     = "10.0.0.0/16"
-cluster_name = "lindarr-demo"
+cluster_name = "eks-local-zone-demo"
 
-region = "us-east-1"
+region = "ap-northeast-1"
 
-lzs = ["us-east-1-bos-1a"]
+lzs = ["ap-northeast-1-tpe-1a"]
