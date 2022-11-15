@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"
+  region = var.region
 
 }
 
@@ -18,8 +18,8 @@ provider "helm" {
 }
 
 locals {
-  name   = basename(path.cwd)
-  region = "us-east-1"
+  name               = basename(path.cwd)
+  region             = var.region
   domain_for_route53 = var.domain_name_in_route53
 }
 
@@ -29,7 +29,7 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(module.eks_blueprints.eks_cluster_certificate_authority_data)
 
   exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
+    api_version = "client.authentication.k8s.io/v1alpha1"
     command     = "aws"
     # This requires the awscli to be installed locally where Terraform is executed
     args = ["eks", "get-token", "--cluster-name", module.eks_blueprints.eks_cluster_id]
@@ -67,7 +67,7 @@ module "eks_blueprints" {
   self_managed_node_groups = {
     self_mg_4 = {
       node_group_name    = "self-managed-ondemand"
-      instance_type      = "t3.xlarge"
+      instance_type      = "m5.2xlarge"
       capacity_type      = ""                # Optional Use this only for SPOT capacity as capacity_type = "spot"
       launch_template_os = "amazonlinux2eks" # amazonlinux2eks  or bottlerocket or windows
       # launch_template_os = "bottlerocket" # amazonlinux2eks  or bottlerocket or windows
@@ -89,7 +89,7 @@ module "eks_blueprints" {
   }
 
   cluster_security_group_additional_rules = {
-      ingress_nodes = {
+    ingress_nodes = {
       description                = "Allow all connections from nodes"
       protocol                   = "-1"
       from_port                  = 0
@@ -149,7 +149,7 @@ module "eks_blueprints_kubernetes_addons" {
   eks_worker_security_group_id = module.eks_blueprints.worker_node_security_group_id
   auto_scaling_group_names     = module.eks_blueprints.self_managed_node_group_autoscaling_groups
 
-  eks_cluster_domain = local.domain_for_route53
+  # eks_cluster_domain = local.domain_for_route53
 
 
   # EKS Addons
@@ -157,14 +157,13 @@ module "eks_blueprints_kubernetes_addons" {
   # enable_amazon_eks_vpc_cni            = true
   # enable_amazon_eks_coredns            = true
   # enable_amazon_eks_kube_proxy         = true
-  enable_amazon_eks_aws_ebs_csi_driver = true
-  enable_aws_load_balancer_controller = true  
-
-  enable_metrics_server               = true
-
-  enable_external_dns       = true
   # enable_cluster_autoscaler = true
+  # enable_aws_load_balancer_controller  = true
+  enable_amazon_eks_aws_ebs_csi_driver = true
 
+  enable_metrics_server = true
+
+  enable_external_dns = false
 
   enable_aws_efs_csi_driver = true
   # EFS CSI Drvier required two nodes so that installing helm chart will not stuck 
@@ -173,7 +172,6 @@ module "eks_blueprints_kubernetes_addons" {
     module.eks_blueprints.managed_node_groups
   ]
 }
-
 
 resource "aws_security_group_rule" "allow_node_sg_to_cluster_sg" {
   description = "Self-managed Nodegroup to Cluster API/Managed Nodegroup all traffic"
@@ -191,7 +189,7 @@ resource "aws_security_group_rule" "allow_node_sg_to_cluster_sg" {
 }
 
 resource "aws_security_group_rule" "allow_node_sg_from_cluster_sg" {
-  description = "Cluster API/Managed Nodegroup to Self-Managed Nodegroup all traffic"
+  description              = "Cluster API/Managed Nodegroup to Self-Managed Nodegroup all traffic"
   source_security_group_id = module.eks_blueprints.cluster_primary_security_group_id
   security_group_id        = module.eks_blueprints.worker_node_security_group_id
   type                     = "ingress"
@@ -204,7 +202,6 @@ resource "aws_security_group_rule" "allow_node_sg_from_cluster_sg" {
   ]
 }
 
-
 resource "null_resource" "kubeconfig" {
   provisioner "local-exec" {
     command = "aws eks update-kubeconfig --region ${local.region} --name ${module.eks_blueprints.eks_cluster_id}"
@@ -213,6 +210,4 @@ resource "null_resource" "kubeconfig" {
   depends_on = [
     module.eks_blueprints
   ]
-
-
 }

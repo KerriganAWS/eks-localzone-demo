@@ -1,5 +1,5 @@
 variable "vpc_id" {
-  type = string
+  type        = string
   description = "The IP of the VPC"
 }
 
@@ -16,5 +16,9 @@ variable "cluster_name" {
 }
 
 variable "domain_name_in_route53" {
+  type = string
+}
+
+variable "region" {
   type = string
 }
